@@ -2022,34 +2022,51 @@
     });
 
     const stage = document.getElementById("tpm-stage");
-    const chipCenter = { x: 260, y: 260 };
-    const lanes = [
-      { x: 96, y: 90, label: "derive" },
-      { x: 424, y: 140, label: "seal" },
-      { x: 94, y: 392, label: "erase" },
-      { x: 422, y: 438, label: "rollback" }
-    ];
+    const chip = stage.querySelector(".tpm-chip");
+    const laneNodes = Array.from(stage.querySelectorAll(".trust-node"));
 
-    lanes.forEach((lane, index) => {
-      const dx = chipCenter.x - lane.x;
-      const dy = chipCenter.y - lane.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    const renderTpmLanes = () => {
+      stage.querySelectorAll(".chip-lane, .lane-pulse").forEach((el) => el.remove());
 
-      const line = document.createElement("div");
-      line.className = "chip-lane";
-      line.style.left = `${lane.x}px`;
-      line.style.top = `${lane.y}px`;
-      line.style.width = `${length}px`;
-      line.style.transform = `rotate(${angle}deg)`;
-      stage.appendChild(line);
+      const stageRect = stage.getBoundingClientRect();
+      const chipRect = chip.getBoundingClientRect();
+      const chipCenter = {
+        x: chipRect.left - stageRect.left + chipRect.width / 2,
+        y: chipRect.top - stageRect.top + chipRect.height / 2
+      };
 
-      const pulse = document.createElement("div");
-      pulse.className = "lane-pulse";
-      pulse.style.offsetPath = `path("M ${lane.x} ${lane.y} L ${chipCenter.x} ${chipCenter.y}")`;
-      pulse.style.animation = `laneTravel 2.8s ease-in-out ${index * 0.6}s infinite`;
-      stage.appendChild(pulse);
-    });
+      laneNodes.forEach((node, index) => {
+        const rect = node.getBoundingClientRect();
+        const nodeCenterX = rect.left - stageRect.left + rect.width / 2;
+        const nodeCenterY = rect.top - stageRect.top + rect.height / 2;
+
+        const startX = nodeCenterX < chipCenter.x
+          ? rect.left - stageRect.left + rect.width
+          : rect.left - stageRect.left;
+        const startY = nodeCenterY;
+
+        const dx = chipCenter.x - startX;
+        const dy = chipCenter.y - startY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        const line = document.createElement("div");
+        line.className = "chip-lane";
+        line.style.left = `${startX}px`;
+        line.style.top = `${startY}px`;
+        line.style.width = `${length}px`;
+        line.style.transform = `rotate(${angle}deg)`;
+        stage.appendChild(line);
+
+        const pulse = document.createElement("div");
+        pulse.className = "lane-pulse";
+        pulse.style.offsetPath = `path("M ${startX} ${startY} L ${chipCenter.x} ${chipCenter.y}")`;
+        pulse.style.animation = `laneTravel 2.8s ease-in-out ${index * 0.6}s infinite`;
+        stage.appendChild(pulse);
+      });
+    };
+
+    renderTpmLanes();
 
     const canvas = document.getElementById("ambient-canvas");
     const ctx = canvas.getContext("2d");
@@ -2126,6 +2143,7 @@
     window.addEventListener("resize", () => {
       resize();
       buildParticles();
+      renderTpmLanes();
       if (prefersReducedMotion) {
         ctx.clearRect(0, 0, width, height);
       }
